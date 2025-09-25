@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import Icon from '../../components/Icon';
 
 export default function CardGames() {
-  const [balance, setBalance] = useState(1000.50);
+  const [balance, setBalance] = useState(250.00);
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [betAmount, setBetAmount] = useState(10);
   const [gameInProgress, setGameInProgress] = useState(false);
@@ -21,29 +21,32 @@ export default function CardGames() {
       id: 'blackjack',
       title: 'Blackjack',
       description: 'Classic 21 card game',
-      minBet: 5,
-      maxBet: 500,
-      icon: '🃏'
+      minBet: 10,
+      maxBet: 1000,
+      emoji: '🃏',
+      payout: '1:1 (after 30% commission)'
     },
     {
       id: 'poker',
       title: 'Video Poker',
       description: 'Five-card draw poker',
       minBet: 10,
-      maxBet: 1000,
-      icon: '🎰'
+      maxBet: 2000,
+      emoji: '🎰',
+      payout: 'Varies (after 30% commission)'
     },
     {
       id: 'baccarat',
       title: 'Baccarat',
       description: 'Player vs Banker',
       minBet: 25,
-      maxBet: 2000,
-      icon: '🎲'
+      maxBet: 5000,
+      emoji: '💎',
+      payout: '1:1 (after 30% commission)'
     }
   ];
 
-  const betAmounts = [5, 10, 25, 50, 100];
+  const betAmounts = [10, 25, 50, 100, 250];
 
   const suits = ['♠️', '♥️', '♦️', '♣️'];
   const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -81,12 +84,17 @@ export default function CardGames() {
   };
 
   const startBlackjack = () => {
+    if (betAmount < 10) {
+      Alert.alert('Minimum Bet', 'Minimum bet is R10.');
+      return;
+    }
+
     if (betAmount > balance) {
       Alert.alert('Insufficient Balance', 'You don\'t have enough funds to place this bet.');
       return;
     }
 
-    console.log(`Starting Blackjack with $${betAmount} bet`);
+    console.log(`Starting Blackjack with R${betAmount} bet`);
     setBalance(prev => prev - betAmount);
     setGameInProgress(true);
 
@@ -110,7 +118,10 @@ export default function CardGames() {
 
     if (newScore > 21) {
       // Player busts
-      Alert.alert('Bust!', `You went over 21. You lost $${betAmount.toFixed(2)}.`);
+      Alert.alert(
+        '💥 Bust!', 
+        `You went over 21 with ${newScore}.\n\nYou lost: R${betAmount.toFixed(2)}`
+      );
       endGame();
     }
   };
@@ -133,21 +144,39 @@ export default function CardGames() {
     setTimeout(() => {
       if (newDealerScore > 21) {
         // Dealer busts, player wins
-        const winnings = betAmount * 2;
-        setBalance(prev => prev + winnings);
-        Alert.alert('You Win!', `Dealer busted! You won $${winnings.toFixed(2)}!`);
+        const grossWinnings = betAmount * 2;
+        const commission = grossWinnings * 0.3;
+        const netWinnings = grossWinnings - commission;
+        
+        setBalance(prev => prev + netWinnings);
+        Alert.alert(
+          '🏆 You Win!', 
+          `Dealer busted with ${newDealerScore}!\n\nGross Winnings: R${grossWinnings.toFixed(2)}\nHouse Commission (30%): R${commission.toFixed(2)}\nNet Winnings: R${netWinnings.toFixed(2)}\n\nAdded to your balance!`
+        );
       } else if (playerScore > newDealerScore) {
         // Player wins
-        const winnings = betAmount * 2;
-        setBalance(prev => prev + winnings);
-        Alert.alert('You Win!', `${playerScore} beats ${newDealerScore}! You won $${winnings.toFixed(2)}!`);
+        const grossWinnings = betAmount * 2;
+        const commission = grossWinnings * 0.3;
+        const netWinnings = grossWinnings - commission;
+        
+        setBalance(prev => prev + netWinnings);
+        Alert.alert(
+          '🏆 You Win!', 
+          `${playerScore} beats ${newDealerScore}!\n\nGross Winnings: R${grossWinnings.toFixed(2)}\nHouse Commission (30%): R${commission.toFixed(2)}\nNet Winnings: R${netWinnings.toFixed(2)}\n\nAdded to your balance!`
+        );
       } else if (playerScore === newDealerScore) {
         // Push
         setBalance(prev => prev + betAmount);
-        Alert.alert('Push!', 'It\'s a tie! Your bet is returned.');
+        Alert.alert(
+          '🤝 Push!', 
+          `Both have ${playerScore}. It's a tie!\n\nYour bet of R${betAmount.toFixed(2)} is returned.`
+        );
       } else {
         // Dealer wins
-        Alert.alert('Dealer Wins!', `${newDealerScore} beats ${playerScore}. You lost $${betAmount.toFixed(2)}.`);
+        Alert.alert(
+          '😔 Dealer Wins!', 
+          `${newDealerScore} beats ${playerScore}.\n\nYou lost: R${betAmount.toFixed(2)}`
+        );
       }
       endGame();
     }, 1000);
@@ -162,23 +191,42 @@ export default function CardGames() {
   };
 
   const startOtherGame = (gameId: string) => {
+    if (betAmount < 10) {
+      Alert.alert('Minimum Bet', 'Minimum bet is R10.');
+      return;
+    }
+
     if (betAmount > balance) {
       Alert.alert('Insufficient Balance', 'You don\'t have enough funds to place this bet.');
       return;
     }
 
-    console.log(`Starting ${gameId} with $${betAmount} bet`);
+    console.log(`Starting ${gameId} with R${betAmount} bet`);
     setBalance(prev => prev - betAmount);
+    
+    Alert.alert(
+      'Game Starting!', 
+      `${cardGames.find(g => g.id === gameId)?.title} starting...\n\nBet: R${betAmount}\nPotential Win: R${(betAmount * 2 * 0.7).toFixed(2)}\n(After 30% commission)`
+    );
     
     // Simulate game result
     setTimeout(() => {
       const won = Math.random() > 0.5;
       if (won) {
-        const winnings = betAmount * 2;
-        setBalance(prev => prev + winnings);
-        Alert.alert('You Won!', `You won $${winnings.toFixed(2)}!`);
+        const grossWinnings = betAmount * 2;
+        const commission = grossWinnings * 0.3;
+        const netWinnings = grossWinnings - commission;
+        
+        setBalance(prev => prev + netWinnings);
+        Alert.alert(
+          '🏆 You Won!', 
+          `Gross Winnings: R${grossWinnings.toFixed(2)}\nHouse Commission (30%): R${commission.toFixed(2)}\nNet Winnings: R${netWinnings.toFixed(2)}\n\nAdded to your balance!`
+        );
       } else {
-        Alert.alert('You Lost!', `You lost $${betAmount.toFixed(2)}.`);
+        Alert.alert(
+          '😔 You Lost!', 
+          `Better luck next time!\n\nYou lost: R${betAmount.toFixed(2)}`
+        );
       }
     }, 2000);
   };
@@ -190,8 +238,8 @@ export default function CardGames() {
         <View style={{ 
           padding: 20, 
           backgroundColor: colors.primary,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border
+          borderBottomWidth: 3,
+          borderBottomColor: colors.accent
         }}>
           <View style={commonStyles.row}>
             <TouchableOpacity 
@@ -201,20 +249,27 @@ export default function CardGames() {
               <Icon name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={[commonStyles.title, { flex: 1, textAlign: 'center', marginBottom: 0 }]}>
-              Card Games
+              🃏 Card Games
             </Text>
-            <Text style={{ color: colors.gold, fontWeight: '600', fontSize: 16 }}>
-              ${balance.toFixed(2)}
+            <Text style={{ color: colors.gold, fontWeight: '900', fontSize: 16 }}>
+              R{balance.toFixed(2)}
             </Text>
           </View>
+        </View>
+
+        {/* Commission Notice */}
+        <View style={[commonStyles.card, { margin: 20, backgroundColor: colors.commission }]}>
+          <Text style={[commonStyles.text, { color: colors.text, fontWeight: '700', textAlign: 'center' }]}>
+            🏆 30% Commission Applied to All Winnings
+          </Text>
         </View>
 
         {!selectedGame && (
           <>
             {/* Game Selection */}
-            <View style={[commonStyles.section, { marginTop: 20 }]}>
+            <View style={[commonStyles.section, { marginTop: 0 }]}>
               <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-                Choose Your Game
+                🎮 Choose Your Card Game
               </Text>
               
               {cardGames.map((game) => (
@@ -223,18 +278,27 @@ export default function CardGames() {
                   style={[commonStyles.gameCard, { marginBottom: 16 }]}
                   onPress={() => setSelectedGame(game.id)}
                 >
-                  <Text style={{ fontSize: 48, marginBottom: 12 }}>
-                    {game.icon}
+                  <Text style={{ fontSize: 64, marginBottom: 12 }}>
+                    {game.emoji}
                   </Text>
                   <Text style={[commonStyles.subtitle, { marginBottom: 8 }]}>
                     {game.title}
                   </Text>
-                  <Text style={[commonStyles.textSecondary, { marginBottom: 12 }]}>
+                  <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
                     {game.description}
                   </Text>
-                  <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                    Min: ${game.minBet} • Max: ${game.maxBet}
+                  <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 8 }]}>
+                    Min: R{game.minBet} • Max: R{game.maxBet}
                   </Text>
+                  <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 12 }]}>
+                    Payout: {game.payout}
+                  </Text>
+                  
+                  <View style={[buttonStyles.primary, { width: '100%' }]}>
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      🎯 Play {game.title}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -247,18 +311,18 @@ export default function CardGames() {
               onPress={() => setSelectedGame(null)}
               style={[buttonStyles.secondary, { alignSelf: 'flex-start', marginBottom: 20 }]}
             >
-              <Text style={{ color: colors.text }}>← Back to Games</Text>
+              <Text style={{ color: colors.text, fontWeight: '600' }}>← Back to Games</Text>
             </TouchableOpacity>
 
             <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
-              Blackjack
+              🃏 Blackjack
             </Text>
 
             {/* Bet Amount Selection */}
             {!gameInProgress && (
               <View style={{ marginBottom: 20 }}>
                 <Text style={[commonStyles.text, { marginBottom: 12 }]}>
-                  Select Bet Amount
+                  💰 Select Bet Amount (Min R10)
                 </Text>
                 <View style={{ 
                   flexDirection: 'row', 
@@ -282,21 +346,30 @@ export default function CardGames() {
                     >
                       <Text style={{ 
                         color: betAmount === amount ? colors.primary : colors.text,
-                        fontWeight: '600',
+                        fontWeight: '700',
                         fontSize: 14
                       }}>
-                        ${amount}
+                        R{amount}
                       </Text>
                     </TouchableOpacity>
                   ))}
+                </View>
+
+                <View style={[commonStyles.card, { marginBottom: 16, backgroundColor: colors.accent }]}>
+                  <Text style={[commonStyles.text, { color: colors.text, textAlign: 'center' }]}>
+                    💰 Potential Net Win: R{(betAmount * 2 * 0.7).toFixed(2)}
+                  </Text>
+                  <Text style={[commonStyles.textSecondary, { color: colors.text, opacity: 0.9, textAlign: 'center', fontSize: 12 }]}>
+                    (After 30% house commission)
+                  </Text>
                 </View>
 
                 <TouchableOpacity
                   style={[buttonStyles.gold, { width: '100%' }]}
                   onPress={startBlackjack}
                 >
-                  <Text style={{ color: colors.primary, fontWeight: '700' }}>
-                    Deal Cards - ${betAmount}
+                  <Text style={{ color: colors.primary, fontWeight: '900' }}>
+                    🃏 Deal Cards - R{betAmount}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -308,18 +381,20 @@ export default function CardGames() {
                 {/* Dealer Cards */}
                 <View style={[commonStyles.card, { marginBottom: 16 }]}>
                   <Text style={[commonStyles.text, { marginBottom: 8 }]}>
-                    Dealer ({dealerScore})
+                    🎩 Dealer ({dealerScore})
                   </Text>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                     {dealerCards.map((card, index) => (
                       <View key={index} style={{
                         backgroundColor: colors.text,
                         padding: 8,
-                        borderRadius: 4,
-                        minWidth: 40,
-                        alignItems: 'center'
+                        borderRadius: 8,
+                        minWidth: 50,
+                        alignItems: 'center',
+                        borderWidth: 2,
+                        borderColor: colors.accent
                       }}>
-                        <Text style={{ color: colors.primary, fontWeight: '600' }}>
+                        <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 16 }}>
                           {card}
                         </Text>
                       </View>
@@ -330,18 +405,20 @@ export default function CardGames() {
                 {/* Player Cards */}
                 <View style={[commonStyles.card, { marginBottom: 16 }]}>
                   <Text style={[commonStyles.text, { marginBottom: 8 }]}>
-                    Your Hand ({playerScore})
+                    👤 Your Hand ({playerScore})
                   </Text>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                     {playerCards.map((card, index) => (
                       <View key={index} style={{
                         backgroundColor: colors.text,
                         padding: 8,
-                        borderRadius: 4,
-                        minWidth: 40,
-                        alignItems: 'center'
+                        borderRadius: 8,
+                        minWidth: 50,
+                        alignItems: 'center',
+                        borderWidth: 2,
+                        borderColor: colors.gold
                       }}>
-                        <Text style={{ color: colors.primary, fontWeight: '600' }}>
+                        <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 16 }}>
                           {card}
                         </Text>
                       </View>
@@ -356,16 +433,16 @@ export default function CardGames() {
                       style={[buttonStyles.primary, { flex: 1 }]}
                       onPress={hit}
                     >
-                      <Text style={{ color: colors.text, fontWeight: '600' }}>
-                        Hit
+                      <Text style={{ color: colors.text, fontWeight: '700' }}>
+                        👆 Hit
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[buttonStyles.secondary, { flex: 1 }]}
+                      style={[buttonStyles.gold, { flex: 1 }]}
                       onPress={stand}
                     >
-                      <Text style={{ color: colors.text, fontWeight: '600' }}>
-                        Stand
+                      <Text style={{ color: colors.primary, fontWeight: '700' }}>
+                        ✋ Stand
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -381,17 +458,17 @@ export default function CardGames() {
               onPress={() => setSelectedGame(null)}
               style={[buttonStyles.secondary, { alignSelf: 'flex-start', marginBottom: 20 }]}
             >
-              <Text style={{ color: colors.text }}>← Back to Games</Text>
+              <Text style={{ color: colors.text, fontWeight: '600' }}>← Back to Games</Text>
             </TouchableOpacity>
 
             <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
-              {cardGames.find(g => g.id === selectedGame)?.title}
+              {cardGames.find(g => g.id === selectedGame)?.emoji} {cardGames.find(g => g.id === selectedGame)?.title}
             </Text>
 
             {/* Bet Amount Selection */}
             <View style={{ marginBottom: 20 }}>
               <Text style={[commonStyles.text, { marginBottom: 12 }]}>
-                Select Bet Amount
+                💰 Select Bet Amount (Min R10)
               </Text>
               <View style={{ 
                 flexDirection: 'row', 
@@ -415,27 +492,36 @@ export default function CardGames() {
                   >
                     <Text style={{ 
                       color: betAmount === amount ? colors.primary : colors.text,
-                      fontWeight: '600',
+                      fontWeight: '700',
                       fontSize: 14
                     }}>
-                      ${amount}
+                      R{amount}
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+
+              <View style={[commonStyles.card, { marginBottom: 16, backgroundColor: colors.accent }]}>
+                <Text style={[commonStyles.text, { color: colors.text, textAlign: 'center' }]}>
+                  💰 Potential Net Win: R{(betAmount * 2 * 0.7).toFixed(2)}
+                </Text>
+                <Text style={[commonStyles.textSecondary, { color: colors.text, opacity: 0.9, textAlign: 'center', fontSize: 12 }]}>
+                  (After 30% house commission)
+                </Text>
               </View>
 
               <TouchableOpacity
                 style={[buttonStyles.gold, { width: '100%' }]}
                 onPress={() => startOtherGame(selectedGame)}
               >
-                <Text style={{ color: colors.primary, fontWeight: '700' }}>
-                  Play {cardGames.find(g => g.id === selectedGame)?.title} - ${betAmount}
+                <Text style={{ color: colors.primary, fontWeight: '900' }}>
+                  🎮 Play {cardGames.find(g => g.id === selectedGame)?.title} - R{betAmount}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View style={commonStyles.card}>
-              <Text style={[commonStyles.text, { textAlign: 'center' }]}>
+              <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 8 }]}>
                 🎮 Game simulation in progress...
               </Text>
               <Text style={[commonStyles.textSecondary, { textAlign: 'center' }]}>
@@ -448,7 +534,10 @@ export default function CardGames() {
         {/* Game Rules */}
         <View style={[commonStyles.card, { margin: 20 }]}>
           <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>
-            Card Game Rules
+            📋 Card Game Rules
+          </Text>
+          <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
+            • Minimum bet: R10 for all games
           </Text>
           <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
             • Blackjack: Get as close to 21 as possible without going over
@@ -460,7 +549,7 @@ export default function CardGames() {
             • Baccarat: Bet on Player or Banker closest to 9
           </Text>
           <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
-            • All payouts are in cryptocurrency
+            • All winnings subject to 30% house commission
           </Text>
         </View>
       </ScrollView>

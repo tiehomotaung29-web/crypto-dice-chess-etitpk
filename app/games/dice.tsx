@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import Icon from '../../components/Icon';
 
 export default function DiceGame() {
-  const [balance, setBalance] = useState(1000.50);
+  const [balance, setBalance] = useState(250.00);
   const [betAmount, setBetAmount] = useState(10);
   const [prediction, setPrediction] = useState<'over' | 'under'>('over');
   const [targetNumber, setTargetNumber] = useState(50);
@@ -15,18 +15,26 @@ export default function DiceGame() {
   const [isRolling, setIsRolling] = useState(false);
   const [diceAnimation] = useState(new Animated.Value(0));
 
-  const betAmounts = [5, 10, 25, 50, 100];
-  const multiplier = prediction === 'over' 
-    ? (100 / (100 - targetNumber)).toFixed(2)
-    : (100 / targetNumber).toFixed(2);
+  const betAmounts = [10, 25, 50, 100, 250];
+  
+  // Calculate multiplier and apply house edge
+  const baseMultiplier = prediction === 'over' 
+    ? (100 / (100 - targetNumber))
+    : (100 / targetNumber);
+  const multiplier = (baseMultiplier * 0.7).toFixed(2); // 30% house commission
 
   const rollDice = () => {
+    if (betAmount < 10) {
+      Alert.alert('Minimum Bet', 'Minimum bet is R10.');
+      return;
+    }
+
     if (betAmount > balance) {
       Alert.alert('Insufficient Balance', 'You don\'t have enough funds to place this bet.');
       return;
     }
 
-    console.log(`Rolling dice: $${betAmount} bet, ${prediction} ${targetNumber}`);
+    console.log(`Rolling dice: R${betAmount} bet, ${prediction} ${targetNumber}`);
     setIsRolling(true);
     setBalance(prev => prev - betAmount);
 
@@ -57,11 +65,20 @@ export default function DiceGame() {
       }
 
       if (won) {
-        const winnings = betAmount * parseFloat(multiplier);
-        setBalance(prev => prev + winnings);
-        Alert.alert('You Won!', `Roll: ${roll}\nYou won $${winnings.toFixed(2)}!`);
+        const grossWinnings = betAmount * parseFloat(multiplier) / 0.7; // Calculate gross before commission
+        const commission = grossWinnings * 0.3;
+        const netWinnings = grossWinnings - commission;
+        
+        setBalance(prev => prev + netWinnings);
+        Alert.alert(
+          '🎉 You Won!', 
+          `Roll: ${roll}\n\nGross Winnings: R${grossWinnings.toFixed(2)}\nHouse Commission (30%): R${commission.toFixed(2)}\nNet Winnings: R${netWinnings.toFixed(2)}\n\nAdded to your balance!`
+        );
       } else {
-        Alert.alert('You Lost!', `Roll: ${roll}\nBetter luck next time!`);
+        Alert.alert(
+          '😔 You Lost!', 
+          `Roll: ${roll}\n\nYou needed ${prediction} ${targetNumber}\nYou lost: R${betAmount.toFixed(2)}`
+        );
       }
       
       setIsRolling(false);
@@ -80,8 +97,8 @@ export default function DiceGame() {
         <View style={{ 
           padding: 20, 
           backgroundColor: colors.primary,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border
+          borderBottomWidth: 3,
+          borderBottomColor: colors.accent
         }}>
           <View style={commonStyles.row}>
             <TouchableOpacity 
@@ -91,18 +108,25 @@ export default function DiceGame() {
               <Icon name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={[commonStyles.title, { flex: 1, textAlign: 'center', marginBottom: 0 }]}>
-              Dice Game
+              🎲 Dice Game
             </Text>
-            <Text style={{ color: colors.gold, fontWeight: '600', fontSize: 16 }}>
-              ${balance.toFixed(2)}
+            <Text style={{ color: colors.gold, fontWeight: '900', fontSize: 16 }}>
+              R{balance.toFixed(2)}
             </Text>
           </View>
         </View>
 
+        {/* Commission Notice */}
+        <View style={[commonStyles.card, { margin: 20, backgroundColor: colors.commission }]}>
+          <Text style={[commonStyles.text, { color: colors.text, fontWeight: '700', textAlign: 'center' }]}>
+            🏆 30% Commission Applied to All Winnings
+          </Text>
+        </View>
+
         {/* Dice Display */}
-        <View style={[commonStyles.section, { marginTop: 30 }]}>
+        <View style={[commonStyles.section, { marginTop: 0 }]}>
           <Animated.View style={{ transform: [{ rotate: diceRotation }] }}>
-            <Text style={{ fontSize: 80, textAlign: 'center' }}>🎲</Text>
+            <Text style={{ fontSize: 100, textAlign: 'center' }}>🎲</Text>
           </Animated.View>
           {lastRoll && (
             <Text style={[commonStyles.title, { color: colors.gold, marginTop: 16 }]}>
@@ -114,12 +138,12 @@ export default function DiceGame() {
         {/* Bet Configuration */}
         <View style={[commonStyles.card, { margin: 20 }]}>
           <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-            Configure Your Bet
+            🎯 Configure Your Bet
           </Text>
 
           {/* Bet Amount */}
           <Text style={[commonStyles.text, { marginBottom: 12 }]}>
-            Bet Amount
+            💰 Bet Amount (Min R10)
           </Text>
           <View style={{ 
             flexDirection: 'row', 
@@ -144,10 +168,10 @@ export default function DiceGame() {
               >
                 <Text style={{ 
                   color: betAmount === amount ? colors.primary : colors.text,
-                  fontWeight: '600',
+                  fontWeight: '700',
                   fontSize: 14
                 }}>
-                  ${amount}
+                  R{amount}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -155,7 +179,7 @@ export default function DiceGame() {
 
           {/* Prediction Type */}
           <Text style={[commonStyles.text, { marginBottom: 12 }]}>
-            Prediction
+            🎯 Prediction
           </Text>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
             <TouchableOpacity
@@ -171,9 +195,9 @@ export default function DiceGame() {
             >
               <Text style={{ 
                 color: prediction === 'over' ? colors.text : colors.textSecondary,
-                fontWeight: '600' 
+                fontWeight: '700' 
               }}>
-                Over
+                📈 Over
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -189,16 +213,16 @@ export default function DiceGame() {
             >
               <Text style={{ 
                 color: prediction === 'under' ? colors.text : colors.textSecondary,
-                fontWeight: '600' 
+                fontWeight: '700' 
               }}>
-                Under
+                📉 Under
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Target Number */}
           <Text style={[commonStyles.text, { marginBottom: 12 }]}>
-            Target Number: {targetNumber}
+            🎯 Target Number: {targetNumber}
           </Text>
           <View style={{ 
             flexDirection: 'row', 
@@ -210,16 +234,18 @@ export default function DiceGame() {
               style={[buttonStyles.secondary, { paddingHorizontal: 16 }]}
               onPress={() => setTargetNumber(Math.max(1, targetNumber - 5))}
             >
-              <Text style={{ color: colors.text, fontWeight: '600' }}>-5</Text>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>-5</Text>
             </TouchableOpacity>
             <View style={{ 
               flex: 1, 
               backgroundColor: colors.backgroundAlt, 
               padding: 12, 
-              borderRadius: 8,
-              alignItems: 'center'
+              borderRadius: 12,
+              alignItems: 'center',
+              borderWidth: 2,
+              borderColor: colors.accent
             }}>
-              <Text style={{ color: colors.gold, fontSize: 18, fontWeight: '700' }}>
+              <Text style={{ color: colors.gold, fontSize: 20, fontWeight: '900' }}>
                 {targetNumber}
               </Text>
             </View>
@@ -227,15 +253,25 @@ export default function DiceGame() {
               style={[buttonStyles.secondary, { paddingHorizontal: 16 }]}
               onPress={() => setTargetNumber(Math.min(99, targetNumber + 5))}
             >
-              <Text style={{ color: colors.text, fontWeight: '600' }}>+5</Text>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>+5</Text>
             </TouchableOpacity>
           </View>
 
           {/* Multiplier Display */}
           <View style={[commonStyles.row, { marginBottom: 20 }]}>
-            <Text style={commonStyles.text}>Multiplier:</Text>
-            <Text style={{ color: colors.gold, fontSize: 18, fontWeight: '700' }}>
+            <Text style={commonStyles.text}>💎 Net Multiplier:</Text>
+            <Text style={{ color: colors.gold, fontSize: 20, fontWeight: '900' }}>
               {multiplier}x
+            </Text>
+          </View>
+
+          {/* Potential Win Display */}
+          <View style={[commonStyles.card, { marginBottom: 20, backgroundColor: colors.accent }]}>
+            <Text style={[commonStyles.text, { color: colors.text, textAlign: 'center' }]}>
+              💰 Potential Net Win: R{(betAmount * parseFloat(multiplier)).toFixed(2)}
+            </Text>
+            <Text style={[commonStyles.textSecondary, { color: colors.text, opacity: 0.9, textAlign: 'center', fontSize: 12 }]}>
+              (After 30% house commission)
             </Text>
           </View>
 
@@ -251,8 +287,8 @@ export default function DiceGame() {
             onPress={rollDice}
             disabled={isRolling}
           >
-            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 16 }}>
-              {isRolling ? 'Rolling...' : `Roll Dice - $${betAmount}`}
+            <Text style={{ color: colors.primary, fontWeight: '900', fontSize: 16 }}>
+              {isRolling ? '🎲 Rolling...' : `🎲 Roll Dice - R${betAmount}`}
             </Text>
           </TouchableOpacity>
         </View>
@@ -260,10 +296,13 @@ export default function DiceGame() {
         {/* Game Rules */}
         <View style={[commonStyles.card, { margin: 20, marginTop: 0 }]}>
           <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>
-            How to Play
+            📋 How to Play
           </Text>
           <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
-            • Choose your bet amount and target number
+            • Minimum bet: R10
+          </Text>
+          <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
+            • Choose your bet amount and target number (1-99)
           </Text>
           <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
             • Predict if the dice roll will be over or under your target
@@ -272,7 +311,7 @@ export default function DiceGame() {
             • Higher risk predictions have higher multipliers
           </Text>
           <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
-            • Win your bet amount × multiplier if correct
+            • Win = Bet × Net Multiplier (30% commission already deducted)
           </Text>
         </View>
       </ScrollView>
